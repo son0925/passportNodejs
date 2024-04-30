@@ -1,45 +1,72 @@
-// express 모듈 생성
 const express = require('express');
-// mongoose 모듈 생성 (commonJs로 생성)
-const {default: mongoose} = require('mongoose');
-// path 모듈 생성 (절대경로 목적 호출)
+const mongoose = require('mongoose');
 const path = require('path');
+const User = require('./models/users.model');
+const passport = require('passport');
 
-
-// express 모듈 변수 생성
 const app = express();
 
-// template engine ejs Setting
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'ejs');
+const port = 4000;
 
+app.use(passport.initialize());
+app.use(passport.session());
+require('./config/passport');
 
-// json read MiddleWare
 app.use(express.json());
-// form read MiddleWare
+// form태그가 보내는 value값을 Parsing하는 미들웨이
 app.use(express.urlencoded({extended: false}));
-// Static File MiddleWare
-app.use('/static', express.static(path.join(__dirname, 'public')));
+// ejs 엔진 설정
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
 
-// mongoose DB Connect url
+// MongoDB Connect Code
 mongoose.connect(`mongodb+srv://son0925:1234@son0925.kwzwdli.mongodb.net/`)
   .then(() => {
-    console.log(`Mongoose DB Connect`)
+    console.log(`MongoDB Connected`);
   })
   .catch((err) => {
-    console.log(err)
+    console.log('err: '+err)
   });
 
+// 정적 파일 제공
+app.use('/static', express.static(path.join(__dirname, 'public')));
 
+// 로그인, 회원가입 render
 app.get('/login', (req,res) => {
-  res.render('login')
+  res.render('login');
+})
+app.post('/login', (req,res,next) => {
+  passport.authenticate("local", (err, user, info) => {
+    if(err) {
+      return next(err);
+    }
+    if (!user) {
+      return res.json({msg: info});
+    }
+
+    req.logIn(user, function (err) {
+      if(err) {return next(err);}
+      res.redirect('/')
+    })
+  })
 })
 app.get('/signup', (req,res) => {
-  res.render('signup')
+  res.render('signup');
+})
+app.post('/signup', async (req,res) => {
+  // user 객체 생성
+  const user = new User(req.body);
+  // user 컬렉션에 유저 저장
+  try {
+    await user.save();
+    return res.status(200).json({
+      success: true
+    })
+  } catch (error) {
+    console.error(error);
+  }
 })
 
-// 서버 실행
-const port = 4000;
 app.listen(port, () => {
-  console.log(`Running On Port ${port}`);
+  console.log(`Running On Port ${port}`)
 })

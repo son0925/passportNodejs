@@ -1,62 +1,101 @@
+// Express Require
 const express = require('express');
+// Mongo DB Require
 const mongoose = require('mongoose');
+// Path Require
 const path = require('path');
-const User = require('./models/users.model');
+// Passport Require
 const passport = require('passport');
+// User 모델 호출
+const User = require('./models/users.model');
+const cookieSession = require('cookie-session');
 
+
+
+// Server Port Number
+const port = 4000;
+
+// Express Method Variable
 const app = express();
 
-const port = 4000;
+const cookieEncryptionKey = ['key1', 'key2'];
+app.use(cookieSession({
+  name: 'cookie-session-name',
+  keys: cookieEncryptionKey
+}))
+app.use(function(request, response, next) {
+  if (request.session && !request.session.regenerate) {
+      request.session.regenerate = (cb) => {
+          cb()
+      }
+  }
+  if (request.session && !request.session.save) {
+      request.session.save = (cb) => {
+          cb()
+      }
+  }
+  next()
+})
 
 app.use(passport.initialize());
 app.use(passport.session());
 require('./config/passport');
 
+
+// Json Read Middleware
 app.use(express.json());
-// form태그가 보내는 value값을 Parsing하는 미들웨이
-app.use(express.urlencoded({extended: false}));
-// ejs 엔진 설정
+// form values parsing middleware
+app.use(express.urlencoded());
+
+// Mongo DB Connect
+mongoose.connect('mongodb+srv://son0925:1234@son0925.kwzwdli.mongodb.net/')
+  .then(() => {
+    console.log('Mongo DB Connect');
+  })
+  .catch((err) => {
+    console.log(err);
+  });
+
+// Static File Service
+app.use('/static', express.static(path.join(__dirname, 'public')));
+
+// Template Engine Set
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-// MongoDB Connect Code
-mongoose.connect(`mongodb+srv://son0925:1234@son0925.kwzwdli.mongodb.net/`)
-  .then(() => {
-    console.log(`MongoDB Connected`);
-  })
-  .catch((err) => {
-    console.log('err: '+err)
-  });
+app.get('/', (req,res) => {
+  res.render('index')
+})
 
-// 정적 파일 제공
-app.use('/static', express.static(path.join(__dirname, 'public')));
-
-// 로그인, 회원가입 render
+// Render login.ejs
 app.get('/login', (req,res) => {
   res.render('login');
 })
+// Login Post
 app.post('/login', (req,res,next) => {
-  passport.authenticate("local", (err, user, info) => {
-    if(err) {
-      return next(err);
-    }
-    if (!user) {
-      return res.json({msg: info});
-    }
+  passport.authenticate('local', (err,user,info) => {
+    if(err) return next(err);
+    
+    console.log(1)
+    if(!user) return next({msg: info});
 
-    req.logIn(user, function (err) {
-      if(err) {return next(err);}
-      res.redirect('/')
+    req.logIn(user, function(err) {
+      console.log(1)
+      if(err) return next(err);
+      res.redirect('/');
     })
-  })
+  })(req,res,next)  
 })
+
+// Render signup.ejs
 app.get('/signup', (req,res) => {
   res.render('signup');
 })
+
+// SignUp Post
 app.post('/signup', async (req,res) => {
-  // user 객체 생성
+  // req.body의 내용을 User객체로 저장
   const user = new User(req.body);
-  // user 컬렉션에 유저 저장
   try {
     await user.save();
     return res.status(200).json({
@@ -67,6 +106,8 @@ app.post('/signup', async (req,res) => {
   }
 })
 
+
+// Server Listener
 app.listen(port, () => {
-  console.log(`Running On Port ${port}`)
+  console.log(`Listen On Port ${port}`);
 })

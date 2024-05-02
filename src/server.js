@@ -1,3 +1,4 @@
+// server.js
 // Express Require
 const express = require('express');
 // Mongo DB Require
@@ -9,6 +10,7 @@ const passport = require('passport');
 // User 모델 호출
 const User = require('./models/users.model');
 const cookieSession = require('cookie-session');
+const { checkAuthenticated, checkNotAuthenticated } = require('../middleware/auth');
 
 
 
@@ -63,26 +65,26 @@ app.use('/static', express.static(path.join(__dirname, 'public')));
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-app.get('/', (req,res) => {
+app.get('/',checkAuthenticated, (req,res) => {
   res.render('index')
+})
+app.get('/success', (req,res) => {
+  res.json({success: true});
 })
 
 // Render login.ejs
-app.get('/login', (req,res) => {
+app.get('/login', checkNotAuthenticated, (req,res) => {
   res.render('login');
 })
 // Login Post
-app.post('/login', (req,res,next) => {
+app.post('/login', checkNotAuthenticated, (req,res,next) => {
   passport.authenticate('local', (err,user,info) => {
     if(err) return next(err);
-    
-    console.log(1)
     if(!user) return next({msg: info});
 
     req.logIn(user, function(err) {
-      console.log(1)
       if(err) return next(err);
-      res.redirect('/');
+      res.redirect('/success');
     })
   })(req,res,next)  
 })

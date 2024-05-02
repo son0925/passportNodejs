@@ -2,6 +2,7 @@
 const passport = require('passport');
 const User = require('../models/users.model');
 const LocalStrategy = require('passport-local').Strategy;
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
 
 // req.logIn(user) 호출
 passport.serializeUser((user, done) => {
@@ -23,7 +24,7 @@ passport.deserializeUser(async (id, done) => {
 
 
 // local로그인 미들웨어
-passport.use(new LocalStrategy({usernameField: 'email', passwordField: 'password'},
+const localStrategyConfig = new LocalStrategy({usernameField: 'email', passwordField: 'password'},
   (email, password, done) => {
     // mongoose DB에서 문서를 찾는 함수 findOne()
     User.findOne({
@@ -45,4 +46,35 @@ passport.use(new LocalStrategy({usernameField: 'email', passwordField: 'password
       return done(err);
     });
   }
-))
+)
+
+
+
+const googleStrategyConfig = new GoogleStrategy({
+  clientID: process.env.GOOGLE_CLIENT_ID,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  callbackURL: '/auth/google/callback',
+  scope: ['email', 'profile']
+}, (accessToken, refreshToken, profile, done) => {
+  console.log(0);
+  User.findOne({ googleId: profile.id })
+    .then(existingUser => {
+      console.log(1);
+      if (existingUser) return done(null, existingUser);
+      const user = new User({
+        email: profile.emails[0].value,
+        googleId: profile.id
+      });
+      return user.save();
+    })
+    .then(newUser => {
+      done(null, newUser);
+    })
+    .catch(err => {
+      console.error(err);
+      return done(err);
+    });
+});
+
+passport.use('google', googleStrategyConfig);
+passport.use('local', localStrategyConfig)

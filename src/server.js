@@ -12,18 +12,14 @@ const User = require('./models/users.model');
 const cookieSession = require('cookie-session');
 const { checkAuthenticated, checkNotAuthenticated } = require('../middleware/auth');
 
-
-
-// Server Port Number
-const port = 4000;
+require('dotenv').config();
 
 // Express Method Variable
 const app = express();
 
-const cookieEncryptionKey = ['key1', 'key2'];
 app.use(cookieSession({
   name: 'cookie-session-name',
-  keys: cookieEncryptionKey
+  keys: [process.env.COOKIE_ENCRYPTION_KEY]
 }))
 app.use(function(request, response, next) {
   if (request.session && !request.session.regenerate) {
@@ -44,13 +40,14 @@ app.use(passport.session());
 require('./config/passport');
 
 
+
 // Json Read Middleware
 app.use(express.json());
 // form values parsing middleware
 app.use(express.urlencoded());
 
 // Mongo DB Connect
-mongoose.connect('mongodb+srv://son0925:1234@son0925.kwzwdli.mongodb.net/')
+mongoose.connect(process.env.MONGO_URL)
   .then(() => {
     console.log('Mongo DB Connect');
   })
@@ -77,7 +74,6 @@ app.post('/logout', (req,res,next) => {
     res.redirect('/login');
   })
 })
-
 // Render login.ejs
 app.get('/login', checkNotAuthenticated, (req,res) => {
   res.render('login');
@@ -90,7 +86,7 @@ app.post('/login', checkNotAuthenticated, (req,res,next) => {
 
     req.logIn(user, function(err) {
       if(err) return next(err);
-      res.redirect('/success');
+      res.redirect('/');
     })
   })(req,res,next)  
 })
@@ -114,8 +110,16 @@ app.post('/signup', async (req,res) => {
   }
 })
 
+app.get('/auth/google', passport.authenticate('google'));
+app.get('/auth/google/callback', passport.authenticate('google', {
+  successRedirect: '/',
+  failureRedirect: '/login'
+}))
+
+const config = require('config');
+const serverConfig = config.get('server');
 
 // Server Listener
-app.listen(port, () => {
-  console.log(`Listen On Port ${port}`);
+app.listen(serverConfig.port, () => {
+  console.log(`Listen On Port ${serverConfig.port}`);
 })

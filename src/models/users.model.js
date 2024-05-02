@@ -36,6 +36,9 @@ userSchema.pre('save', function (next) {
       })
     })
   }
+  else {
+    next();
+  }
 })
 
 userSchema.methods.comparePassword = function(plainPassword, cb) {

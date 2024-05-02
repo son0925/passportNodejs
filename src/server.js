@@ -71,6 +71,12 @@ app.get('/',checkAuthenticated, (req,res) => {
 app.get('/success', (req,res) => {
   res.json({success: true});
 })
+app.post('/logout', (req,res,next) => {
+  req.logOut(function (err) {
+    if (err) {return next(err)}
+    res.redirect('/login');
+  })
+})
 
 // Render login.ejs
 app.get('/login', checkNotAuthenticated, (req,res) => {

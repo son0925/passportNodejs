@@ -11,7 +11,10 @@ const passport = require('passport');
 const User = require('./models/users.model');
 const cookieSession = require('cookie-session');
 const { checkAuthenticated, checkNotAuthenticated } = require('../middleware/auth');
-
+const config = require('config');
+const mainRouter = require('../routes/main.router');
+const usersRouter = require('../routes/users.router');
+const serverConfig = config.get('server');
 require('dotenv').config();
 
 // Express Method Variable
@@ -62,62 +65,9 @@ app.use('/static', express.static(path.join(__dirname, 'public')));
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-app.get('/',checkAuthenticated, (req,res) => {
-  res.render('index')
-})
-app.get('/success', (req,res) => {
-  res.json({success: true});
-})
-app.post('/logout', (req,res,next) => {
-  req.logOut(function (err) {
-    if (err) {return next(err)}
-    res.redirect('/login');
-  })
-})
-// Render login.ejs
-app.get('/login', checkNotAuthenticated, (req,res) => {
-  res.render('login');
-})
-// Login Post
-app.post('/login', checkNotAuthenticated, (req,res,next) => {
-  passport.authenticate('local', (err,user,info) => {
-    if(err) return next(err);
-    if(!user) return next({msg: info});
+app.use('/', mainRouter)
+app.use('/auth', usersRouter)
 
-    req.logIn(user, function(err) {
-      if(err) return next(err);
-      res.redirect('/');
-    })
-  })(req,res,next)  
-})
-
-// Render signup.ejs
-app.get('/signup', (req,res) => {
-  res.render('signup');
-})
-
-// SignUp Post
-app.post('/signup', async (req,res) => {
-  // req.body의 내용을 User객체로 저장
-  const user = new User(req.body);
-  try {
-    await user.save();
-    return res.status(200).json({
-      success: true
-    })
-  } catch (error) {
-    console.error(error);
-  }
-})
-
-app.get('/auth/google', passport.authenticate('google'));
-app.get('/auth/google/callback', passport.authenticate('google', {
-  successRedirect: '/',
-  failureRedirect: '/login'
-}))
-
-const config = require('config');
-const serverConfig = config.get('server');
 
 // Server Listener
 app.listen(serverConfig.port, () => {

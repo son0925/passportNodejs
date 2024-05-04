@@ -68,6 +68,7 @@ const googleStrategyConfig = new GoogleStrategy({
       return user.save();
     })
     .then(newUser => {
+      console.log(2)
       done(null, newUser);
     })
     .catch(err => {

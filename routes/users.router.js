@@ -3,6 +3,7 @@ const { checkAuthenticated, checkNotAuthenticated } = require('../middleware/aut
 const usersRouter = express.Router();
 const passport = require('passport');
 const User = require('../src/models/users.model');
+const sendMail = require('../src/mail/mail');
 
 usersRouter.post('/login', checkNotAuthenticated, (req,res,next) => {
   passport.authenticate('local', (err,user,info) => {
@@ -28,9 +29,8 @@ usersRouter.post('/signup', async (req,res) => {
   const user = new User(req.body);
   try {
     await user.save();
-    return res.status(200).json({
-      success: true
-    })
+    sendMail('bjpio113@gmail.com', 'WheeSung Son', 'welcome')
+    res.redirect('/login')
   } catch (error) {
     console.error(error);
   }
